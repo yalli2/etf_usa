@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ETF USA 국면 노트 | 미국 배당 ETF와 Bull·Bear 분할매매 계획</title>
+<meta name="description" content="미국 배당 ETF 선별, 시장 국면(Bull/Bear) 판단, 분할매수·분할매도 계획을 한 화면에서 만드는 인터랙티브 도구">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hahmlet:wght@500;700;800&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme:light;
+  --bg:#e9edf1; --surface:#fbfcfd; --sunk:#f1f4f7;
+  --ink:#131a2b; --ink2:#465064; --muted:#737d90; --line:#d3d9e1;
+  --bull:#e34948; --bull-ink:#bb2a2f; --bull-wash:#fbe9e8;
+  --bear:#2a78d6; --bear-ink:#1c5cab; --bear-wash:#e4eefb;
+  --core:#1baf7a; --income:#eda100; --cash:#98a0ad; --idx:#1baf7a;
+  --focus:#131a2b; --on-seg:#10151f;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    color-scheme:dark;
+    --bg:#0f131b; --surface:#191e29; --sunk:#141924;
+    --ink:#eef0f4; --ink2:#c2c8d3; --muted:#8d96a7; --line:#2f3646;
+    --bull:#e66767; --bull-ink:#f29090; --bull-wash:#3a2024;
+    --bear:#3987e5; --bear-ink:#86b6ef; --bear-wash:#1a2a44;
+    --core:#199e70; --income:#c98500; --cash:#6d7686; --idx:#199e70;
+    --focus:#eef0f4; --on-seg:#ffffff;
+  }
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{scroll-behavior:smooth;scroll-padding-top:64px}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.65 "IBM Plex Sans KR",system-ui,sans-serif;font-variant-numeric:tabular-nums}
+h1,h2,h3{font-family:"Hahmlet",serif;line-height:1.25;margin:0;letter-spacing:-.01em}
+p{margin:0 0 .8em;max-width:68ch}
+a{color:inherit}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.wrap{max-width:1120px;margin:0 auto;padding:0 20px}
+
+.top{position:sticky;top:0;z-index:20;background:var(--bg);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;align-items:center;gap:20px;height:52px}
+.brand{font:800 17px "Hahmlet",serif;text-decoration:none;white-space:nowrap}
+.nav{display:flex;gap:2px;overflow-x:auto;flex:1;scrollbar-width:none}
+.nav a{padding:6px 10px;border-radius:6px;text-decoration:none;font-size:14px;color:var(--ink2);white-space:nowrap}
+.nav a:hover{background:var(--surface);color:var(--ink)}
+.asof{font-size:13px;color:var(--muted);white-space:nowrap}
+
+.hero{padding:44px 20px 28px}
+.hero h1{font-size:clamp(34px,6.2vw,68px);font-weight:800}
+.hero h1 span{display:block}
+#heroWhy{font-size:18px;color:var(--ink2);margin-top:14px;max-width:60ch}
+.gauge{margin:30px 0 6px;position:relative}
+.rail{display:grid;grid-template-columns:3fr 5fr 3fr;gap:2px;height:18px}
+.rail i{display:block;border-radius:4px}
+.rail .zb{background:var(--bear)} .rail .zn{background:var(--cash)} .rail .zu{background:var(--bull)}
+.needle{position:absolute;top:-9px;width:4px;height:36px;margin-left:-2px;background:var(--ink);border-radius:2px;box-shadow:0 0 0 2px var(--bg);transition:left .5s cubic-bezier(.2,.8,.2,1)}
+.rail-labels{line-height:1.35;display:grid;grid-template-columns:3fr 5fr 3fr;gap:2px;font-size:13px;color:var(--ink2);margin-top:8px}
+.rail-labels span:nth-child(2){text-align:center}.rail-labels span:nth-child(3){text-align:right}
+
+section{padding:40px 0;border-top:1px solid var(--line)}
+.sec-head{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;align-items:baseline;margin-bottom:22px}
+.step{font:800 28px "Hahmlet",serif;color:var(--muted)}
+.sec-head h2{font-size:clamp(24px,3.4vw,34px);font-weight:800}
+.sec-head p{grid-column:2;color:var(--ink2);margin:0}
+h3{font-size:19px;font-weight:700;margin-bottom:10px}
+
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px}
+.grid-a{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:20px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:20px}
+.panel.flat{background:transparent;border:0;padding:0}
+.fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:12px}
+label.f{display:grid;gap:4px;font-size:13px;color:var(--ink2)}
+label.f input,label.f select{height:40px;padding:0 10px;border:1px solid var(--line);border-radius:6px;background:var(--sunk);font-size:15px;color:var(--ink);width:100%}
+.btn{height:38px;padding:0 14px;border:1px solid var(--ink);border-radius:6px;background:transparent;cursor:pointer;font-size:14px;font-weight:500}
+.btn:hover{background:var(--ink);color:var(--surface)}
+.btn.solid{background:var(--ink);color:var(--surface)}
+.btn.solid:hover{opacity:.86}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;padding:3px;background:var(--sunk);flex-wrap:wrap}
+.seg button{border:0;background:transparent;padding:6px 12px;border-radius:5px;cursor:pointer;font-size:14px;color:var(--ink2)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--surface)}
+
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{padding:8px 7px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-weight:500;color:var(--ink2);font-size:13px;background:var(--sunk);position:sticky;top:0}
+th:first-child,td:first-child{text-align:left}
+td.l,th.l{text-align:left}
+td.wrapc{white-space:normal;min-width:180px}
+#sigTable td,#sigTable th{white-space:normal}
+#sigTable td:last-child{white-space:nowrap}
+th button{border:0;background:none;font:inherit;color:inherit;cursor:pointer;padding:0}
+th button[aria-sort="descending"]::after{content:" ↓";color:var(--ink)}
+th button[aria-sort="ascending"]::after{content:" ↑";color:var(--ink)}
+tr.done td{color:var(--muted);text-decoration:line-through}
+tr.done td:first-child{text-decoration:none}
+tr.stop td{color:var(--bear-ink)}
+tfoot td{font-weight:600;border-bottom:0}
+.tk{font-weight:600}
+.nmc{display:block;max-width:230px;overflow:hidden;text-overflow:ellipsis}
+.up{color:var(--bull-ink)} .dn{color:var(--bear-ink)} .zero{color:var(--muted)}
+.tag{display:inline-block;padding:1px 8px;border-radius:99px;font-size:12px;border:1px solid var(--line);color:var(--ink2)}
+.small{font-size:13px;color:var(--muted)}
+.note{font-size:14px;color:var(--ink2);border-left:3px solid var(--line);padding:2px 0 2px 12px;margin:14px 0 0}
+
+.sliders{display:grid;gap:10px}
+.sl{display:grid;grid-template-columns:92px 1fr 44px;gap:10px;align-items:center;font-size:14px}
+.sl output{text-align:right;color:var(--ink2)}
+input[type=range]{width:100%;accent-color:var(--ink)}
+
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+.side{border:1px solid var(--line);border-radius:10px;padding:16px;background:var(--surface)}
+.side .who{font-size:13px;color:var(--ink2)}
+.side .sym{font:800 34px "Hahmlet",serif;margin:2px 0}
+.side.bull.on{background:var(--bull-wash);border-color:var(--bull)}
+.side.bear.on{background:var(--bear-wash);border-color:var(--bear)}
+.side .state{font-size:13px;font-weight:600;margin-top:6px}
+.side.bull .state{color:var(--bull-ink)} .side.bear .state{color:var(--bear-ink)}
+
+.stack{display:flex;gap:2px;height:44px;margin:6px 0 10px}
+.stack div{border-radius:4px;min-width:3px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:var(--on-seg);overflow:hidden;white-space:nowrap}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--ink2)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:16px 0}
+.kpi{border-top:2px solid var(--ink);padding-top:8px}
+.kpi b{display:block;font:700 24px "Hahmlet",serif}
+.kpi span{font-size:13px;color:var(--ink2)}
+
+svg{display:block;width:100%;height:auto;overflow:visible}
+svg text{font-family:"IBM Plex Sans KR",sans-serif;fill:var(--ink2);font-size:12px}
+.gridl{stroke:var(--line);stroke-width:1}
+#tip{position:fixed;z-index:50;pointer-events:none;background:var(--ink);color:var(--surface);padding:8px 10px;border-radius:6px;font-size:13px;line-height:1.5;max-width:260px;opacity:0;transition:opacity .12s}
+#tip b{font-weight:600}
+footer{padding:36px 0 60px;border-top:1px solid var(--line);font-size:14px;color:var(--ink2)}
+footer ul{padding-left:18px;margin:8px 0}
+footer li{margin:3px 0}
+
+@media (max-width:820px){
+  .grid2,.grid-a{grid-template-columns:minmax(0,1fr)}
+  .asof{display:none}
+  .sec-head{grid-template-columns:1fr}.sec-head p{grid-column:1}
+  .sl{grid-template-columns:80px 1fr 38px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<div class="top"><div class="wrap">
+  <a class="brand" href="#top">ETF USA 국면 노트</a>
+  <nav class="nav" aria-label="단계">
+    <a href="#s1">1 시장 국면</a><a href="#s2">2 배당 ETF</a><a href="#s3">3 포트폴리오</a><a href="#s4">4 분할매수</a><a href="#s5">5 분할매도</a><a href="#s6">레버리지 주의</a><a href="#src">출처</a>
+  </nav>
+  <span class="asof" id="asof"></span>
+</div></div>
+
+<main id="top">
+<div class="wrap hero">
+  <h1><span id="heroA">지금 시장은</span><span id="heroB">중립 구간입니다</span></h1>
+  <p id="heroWhy"></p>
+  <div class="gauge" role="img" aria-label="시장 국면 점수 게이지" id="gaugeBox">
+    <div class="rail"><i class="zb"></i><i class="zn"></i><i class="zu"></i></div>
+    <div class="needle" id="needle"></div>
+    <div class="rail-labels"><span>▼ Bear<br>−3점 이하</span><span>중립<br>−2 ~ +2점</span><span>▲ Bull<br>+3점 이상</span></div>
+  </div>
+</div>
+
+<section id="s1"><div class="wrap">
+  <div class="sec-head"><span class="step">1</span><h2>시장 국면 읽기</h2>
+    <p>추세추종에서 널리 쓰는 다섯 가지 신호를 점수로 합칩니다. 숫자를 오늘 값으로 고치면 판정과 아래 모든 계획이 함께 바뀝니다.</p></div>
+  <div class="grid-a">
+    <div class="panel">
+      <h3>S&amp;P 500 지표 입력</h3>
+      <div class="fields">
+        <label class="f">S&amp;P 500 종가<input type="number" step="0.01" id="m_spx"></label>
+        <label class="f">50일 이동평균<input type="number" step="0.01" id="m_ma50"></label>
+        <label class="f">200일 이동평균<input type="number" step="0.01" id="m_ma200"></label>
+        <label class="f">VIX<input type="number" step="0.01" id="m_vix"></label>
+        <label class="f">52주 최고가<input type="number" step="0.01" id="m_high"></label>
+      </div>
+      <div class="row" style="margin-top:14px"><button class="btn" id="m_reset">기준일 값으로 되돌리기</button><span class="small" id="m_asof"></span></div>
+    </div>
+    <div class="panel">
+      <h3>신호별 판정</h3>
+      <div class="tablewrap"><table id="sigTable"><thead><tr><th>신호</th><th class="l">현재 상태</th><th>점수</th></tr></thead><tbody></tbody><tfoot></tfoot></table></div>
+    </div>
+  </div>
+
+  <h3 style="margin-top:28px">Bull · Bear ETF 선택기</h3>
+  <p>국면이 Bull이면 상승 추종 ETF, Bear이면 하락 추종(인버스) ETF를 씁니다. 중립이면 어느 쪽도 잡지 않는 것이 이 규칙의 기본값입니다.</p>
+  <div class="row">
+    <div class="seg" role="group" aria-label="기초지수" id="pIdx">
+      <button data-v="sp">S&amp;P 500</button><button data-v="ndx">나스닥 100</button><button data-v="sox">반도체</button>
+    </div>
+    <div class="seg" role="group" aria-label="배율" id="pLev">
+      <button data-v="1">1배</button><button data-v="2">2배</button><button data-v="3">3배</button>
+    </div>
+  </div>
+  <div class="pair">
+    <div class="side bull" id="sideBull"><div class="who">▲ Bull ETF</div><div class="sym"></div><div class="nm small"></div><div class="state"></div></div>
+    <div class="side bear" id="sideBear"><div class="who">▼ Bear ETF</div><div class="sym"></div><div class="nm small"></div><div class="state"></div></div>
+  </div>
+  <p class="note">레버리지·인버스 ETF는 매일 배율을 다시 맞추기 때문에 오래 들고 있으면 지수 수익률의 2배·3배와 달라집니다. 아래 「레버리지 주의」에서 직접 확인해 보세요.</p>
+</div></section>
+
+<section id="s2"><div class="wrap">
+  <div class="sec-head"><span class="step">2</span><h2>배당 ETF 고르기</h2>
+    <p>미국 상장 대표 배당 ETF 11개를 여섯 지표로 점수화했습니다. 목적에 맞는 가중치를 고르거나 직접 조절하면 순위가 다시 계산됩니다.</p></div>
+  <div class="grid-a">
+    <div class="panel">
+      <h3>무엇을 중요하게 볼까요</h3>
+      <div class="seg" role="group" aria-label="가중치 프리셋" id="wPreset" style="margin-bottom:14px">
+        <button data-v="balanced">균형</button><button data-v="growth">배당성장</button><button data-v="income">고배당 인컴</button><button data-v="defense">방어</button>
+      </div>
+      <div class="sliders" id="sliders"></div>
+      <p class="small" style="margin-top:12px">배당률은 8%를 상한으로 점수화합니다. 커버드콜 ETF의 분배금에는 옵션 프리미엄이 섞여 있어 그대로 비교하면 순위가 분배율 하나로 결정되기 때문입니다.</p>
+    </div>
+    <div class="panel">
+      <h3>종합 점수 순위</h3>
+      <div class="legend" style="margin-bottom:8px"><span><i style="background:var(--core)"></i>배당주형</span><span><i style="background:var(--income)"></i>커버드콜형 (월배당)</span></div>
+      <div id="scoreChart"></div>
+    </div>
+  </div>
+  <div class="panel" style="margin-top:20px">
+    <h3>지표 표</h3>
+    <div class="tablewrap"><table id="etfTable"><thead></thead><tbody></tbody></table></div>
+    <p class="small" style="margin-top:10px">배당률은 최근 12개월 분배금 기준, 수익률은 배당 재투자 총수익 기준입니다. 열 제목을 누르면 정렬됩니다.</p>
+  </div>
+</div></section>
+
+<section id="s3"><div class="wrap">
+  <div class="sec-head"><span class="step">3</span><h2>포트폴리오 짜기</h2>
+    <p>배당 ETF를 중심(코어)에 두고, 국면이 뚜렷할 때만 Bull·Bear ETF를 일부(위성) 얹는 코어–위성 구조입니다. 현금은 분할매수 대기 자금입니다.</p></div>
+  <div class="panel">
+    <div class="fields">
+      <label class="f">투자금 (달러)<input type="number" min="0" step="100" id="pf_amt"></label>
+      <label class="f">환율 (원/달러, 선택)<input type="number" min="0" step="1" id="pf_fx" placeholder="예: 1400"></label>
+      <label class="f">투자 성향<select id="pf_prof"><option value="safe">안정형</option><option value="mid">균형형</option><option value="agg">공격형</option></select></label>
+      <label class="f">전술 ETF 기초지수<select id="pf_idx"><option value="sp">S&amp;P 500</option><option value="ndx">나스닥 100</option></select></label>
+    </div>
+    <div style="margin-top:20px">
+      <div class="stack" id="pfStack" role="img" aria-label="자산 배분 비중"></div>
+      <div class="legend" id="pfLegend"></div>
+    </div>
+    <div class="kpis" id="pfKpis"></div>
+    <div class="tablewrap"><table id="pfTable"><thead><tr><th>구분</th><th class="l">ETF</th><th>비중</th><th>금액</th><th>기준가</th><th>수량(주)</th><th>배당률</th><th>연 배당(세전)</th></tr></thead><tbody></tbody><tfoot></tfoot></table></div>
+    <p class="note" id="pfRule"></p>
+  </div>
+</div></section>
+
+<section id="s4"><div class="wrap">
+  <div class="sec-head"><span class="step">4</span><h2>분할매수 계획</h2>
+    <p>한 번에 사지 않고 나눠 사는 표를 자동으로 만듭니다. 체결한 회차를 체크해 두면 이 브라우저에 저장되고, 평균단가를 분할매도 계획으로 넘길 수 있습니다.</p></div>
+  <div class="panel">
+    <div class="row" style="margin-bottom:14px">
+      <span class="small">빠른 설정</span>
+      <button class="btn" data-bp="ladder5">가격 하락 5분할</button>
+      <button class="btn" data-bp="pyr3">피라미드 3분할</button>
+      <button class="btn" data-bp="dca12">매월 12회 적립</button>
+      <button class="btn" data-bp="inf40">매일 40분할</button>
+    </div>
+    <div class="fields">
+      <label class="f">종목<select id="b_tk"></select></label>
+      <label class="f">현재가 (달러)<input type="number" min="0" step="0.01" id="b_px"></label>
+      <label class="f">총 매수 예산 (달러)<input type="number" min="0" step="100" id="b_bud"></label>
+      <label class="f">방식<select id="b_mode"><option value="ladder">가격이 내릴 때마다</option><option value="dca">정해진 날짜마다</option></select></label>
+      <label class="f">분할 횟수<input type="number" min="1" max="60" step="1" id="b_n"></label>
+      <label class="f" id="b_stepF">회차 간 하락폭 (%)<input type="number" min="0.5" max="50" step="0.5" id="b_step"></label>
+      <label class="f" id="b_wF">금액 배분<select id="b_w"><option value="equal">균등</option><option value="pyramid">피라미드 (내릴수록 많이)</option></select></label>
+      <label class="f" id="b_freqF">주기<select id="b_freq"><option value="d">매 영업일</option><option value="w">매주</option><option value="2w">격주</option><option value="m">매월</option></select></label>
+      <label class="f">소수점 거래<select id="b_frac"><option value="0">정수 주만</option><option value="1">소수점 허용</option></select></label>
+    </div>
+    <div class="kpis" id="bKpis"></div>
+    <div class="grid2">
+      <div class="tablewrap" style="max-height:420px;overflow-y:auto"><table id="bTable"><thead></thead><tbody></tbody></table></div>
+      <div><div class="legend" id="bLegend" style="margin-bottom:6px"></div><div id="bChart"></div></div>
+    </div>
+    <div class="row" style="margin-top:14px"><button class="btn solid" id="b_send">이 평균단가로 분할매도 계획 만들기</button><button class="btn" id="b_clear">체결 표시 지우기</button></div>
+    <p class="note">「매일 40분할」은 국내에서 무한매수법으로 알려진 방식의 뼈대(원금을 40회로 나눠 매일 매수하고 평균단가 대비 +10%에서 매도)를 본뜬 설정입니다. 원 기법의 세부 주문 규칙은 포함하지 않습니다.</p>
+  </div>
+</div></section>
+
+<section id="s5"><div class="wrap">
+  <div class="sec-head"><span class="step">5</span><h2>분할매도 계획</h2>
+    <p>목표가를 여러 단계로 나눠 익절하고, 손절선을 미리 정해 둡니다. 감정이 아니라 표대로 움직이기 위한 계획입니다.</p></div>
+  <div class="panel">
+    <div class="fields">
+      <label class="f">평균단가 (달러)<input type="number" min="0" step="0.01" id="s_avg"></label>
+      <label class="f">보유 수량 (주)<input type="number" min="0" step="0.0001" id="s_sh"></label>
+      <label class="f">익절 단계 수<input type="number" min="1" max="8" step="1" id="s_n"></label>
+      <label class="f">첫 익절 (+%)<input type="number" min="0.5" step="0.5" id="s_first"></label>
+      <label class="f">단계 간격 (+%)<input type="number" min="0.5" step="0.5" id="s_gap"></label>
+      <label class="f">수량 배분<select id="s_w"><option value="equal">균등</option><option value="back">뒤로 갈수록 많이</option><option value="front">앞에서 많이</option></select></label>
+      <label class="f">손절선 (−%)<input type="number" min="0" step="0.5" id="s_stop"></label>
+    </div>
+    <div class="kpis" id="sKpis"></div>
+    <div class="tablewrap"><table id="sTable"><thead><tr><th>단계</th><th>목표가</th><th>평단 대비</th><th>매도 수량</th><th>매도 금액</th><th>실현 손익</th><th>누적 손익</th></tr></thead><tbody></tbody></table></div>
+    <p class="note">세금과 수수료는 반영하지 않았습니다. 국내 거주자의 해외주식 양도차익과 배당에는 세금이 붙으므로 실제 수익은 표보다 작습니다.</p>
+  </div>
+</div></section>
+
+<section id="s6"><div class="wrap">
+  <div class="sec-head"><span class="step">＊</span><h2>레버리지 ETF가 횡보장에서 녹는 이유</h2>
+    <p>지수가 제자리로 돌아와도 Bull·Bear 레버리지 ETF는 둘 다 손실일 수 있습니다. 변동폭과 기간을 바꿔 가며 확인해 보세요.</p></div>
+  <div class="panel">
+    <div class="fields">
+      <label class="f">배율<select id="d_lev"><option value="2">2배</option><option value="3" selected>3배</option></select></label>
+      <label class="f">하루 변동폭 (%)<input type="number" min="0.2" max="6" step="0.1" id="d_vol" value="1.5"></label>
+      <label class="f">하루 평균 추세 (%)<input type="number" min="-1" max="1" step="0.05" id="d_drift" value="0"></label>
+      <label class="f">기간 (거래일)<input type="number" min="10" max="250" step="5" id="d_days" value="60"></label>
+      <label class="f">&nbsp;<button class="btn" id="d_again" style="height:40px">다른 경로 만들기</button></label>
+    </div>
+    <div class="legend" id="dLegend" style="margin:16px 0 6px"></div>
+    <div id="dChart"></div>
+    <div class="kpis" id="dKpis"></div>
+    <p class="small">무작위로 만든 가상 경로이며 실제 시세가 아닙니다. 시작값은 모두 100입니다.</p>
+  </div>
+</div></section>
+</main>
+
+<footer id="src"><div class="wrap">
+  <h3>출처와 유의사항</h3>
+  <p>이 사이트는 주문을 넣지 않습니다. 만든 계획표를 보고 증권사 앱에서 직접 주문하세요. 모든 수치는 <b id="f_asof"></b> 전후 공개 자료 기준이며, 매수 전에 운용사·증권사 화면에서 현재 값을 확인해야 합니다.</p>
+  <ul>
+    <li>배당 ETF 가격·배당률·보수·수익률·베타·배당 안전점수: <a href="https://www.dividendvision.com/assets/tickers?ticker=SCHD">Dividend Vision 종목 페이지</a> (2026-10-30 ~ 11-10 조회값)</li>
+    <li>S&amp;P 500 종가·이동평균: <a href="https://www.cestriancapitalresearch.com/cestrian-daily-market-review-wednesday-11-november-2026/">Cestrian Daily Market Review 2026-11-11</a>, <a href="https://rallies.ai/news/sp-500-at-risk-of-further-losses-105de8c81b05544c">Rallies 2026-11-11</a></li>
+    <li>VIX 종가: <a href="https://www.tickmill.com/blog/sp500-daily-action-areas-price-targets-111126">Tickmill 2026-11-11</a></li>
+    <li>레버리지·인버스 ETF 보수: <a href="https://get.ycharts.com/resources/blog/largest-leveraged-and-inverse-etfs/">YCharts</a>, <a href="https://etfdb.com/etfs/inverse/">ETF Database</a>, <a href="https://www.bankrate.com/investing/best-leveraged-etfs/">Bankrate</a></li>
+  </ul>
+  <p>점수와 배분 비율은 공개 지표에 정해진 규칙을 적용한 예시이며, 특정 상품의 매수·매도를 권유하는 투자 자문이 아닙니다. 과거 수익률과 배당은 미래를 보장하지 않습니다. 레버리지·인버스 ETF는 원금 대부분을 잃을 수 있는 단기 매매용 상품입니다. 투자 판단과 결과의 책임은 투자자 본인에게 있습니다.</p>
+</div></footer>
+<div id="tip" role="tooltip"></div>
+
+<script id="core">
+(function(root){
+"use strict";
+var DATA={
+  asOf:"2026-11-10",
+  market:{spx:7520.93,ma50:7673,ma200:7331,vix:19.59,high:7844.62},
+  etfs:[
+   {t:"SCHD",n:"Schwab U.S. Dividend Equity",type:"div",kind:"배당성장·퀄리티",price:35.17,y:3.00,er:0.06,freq:"분기",aum:120.5,ytd:31.4,r1:37.3,r3:19.0,r5:9.8,beta:0.49,dg5:41.8,safe:100},
+   {t:"VYM",n:"Vanguard High Dividend Yield",type:"div",kind:"고배당·광범위 분산",price:162.72,y:2.26,er:0.04,freq:"분기",aum:80.9,ytd:15.4,r1:18.8,r3:20.2,r5:11.3,beta:0.64,dg5:23.9,safe:95},
+   {t:"VIG",n:"Vanguard Dividend Appreciation",type:"div",kind:"배당성장",price:243.34,y:1.50,er:0.04,freq:"분기",aum:113.9,ytd:12.1,r1:14.8,r3:17.5,r5:9.8,beta:0.70,dg5:42.9,safe:100},
+   {t:"DGRO",n:"iShares Core Dividend Growth",type:"div",kind:"배당성장",price:81.55,y:1.83,er:0.08,freq:"분기",aum:44.7,ytd:19.1,r1:22.3,r3:20.6,r5:11.1,beta:0.61,dg5:42.8,safe:100},
+   {t:"HDV",n:"iShares Core High Dividend",type:"div",kind:"고배당·퀄리티",price:30.62,y:3.13,er:0.08,freq:"분기",aum:16.2,ytd:29.1,r1:32.3,r3:21.0,r5:13.1,beta:0.20,dg5:41.8,safe:89},
+   {t:"DVY",n:"iShares Select Dividend",type:"div",kind:"고배당",price:162.59,y:3.28,er:0.38,freq:"분기",aum:23.3,ytd:18.0,r1:19.8,r3:19.4,r5:10.1,beta:0.51,dg5:40.0,safe:100},
+   {t:"FDVV",n:"Fidelity High Dividend",type:"div",kind:"고배당·성장 혼합",price:62.35,y:2.75,er:0.15,freq:"분기",aum:10.3,ytd:12.5,r1:14.4,r3:20.8,r5:13.2,beta:0.72,dg5:54.7,safe:93},
+   {t:"SPYD",n:"SPDR Portfolio S&P 500 High Dividend",type:"div",kind:"고배당",price:50.01,y:4.12,er:0.07,freq:"분기",aum:7.7,ytd:19.5,r1:22.5,r3:18.6,r5:8.6,beta:0.55,dg5:1.5,safe:93},
+   {t:"JEPI",n:"JPMorgan Equity Premium Income",type:"cc",kind:"S&P 500 커버드콜",price:57.66,y:7.92,er:0.35,freq:"월",aum:45.2,ytd:7.6,r1:10.1,r3:10.7,r5:7.6,beta:0.40,dg5:4.6,safe:76},
+   {t:"JEPQ",n:"JPMorgan Nasdaq Equity Premium Income",type:"cc",kind:"나스닥 100 커버드콜",price:56.24,y:13.20,er:0.35,freq:"월",aum:43.7,ytd:6.8,r1:8.0,r3:18.3,r5:null,beta:0.77,dg5:null,safe:86},
+   {t:"DIVO",n:"Amplify CWP Enhanced Dividend Income",type:"cc",kind:"배당주 + 커버드콜",price:47.33,y:6.39,er:0.56,freq:"월",aum:8.0,ytd:10.7,r1:12.1,r3:17.7,r5:10.5,beta:0.54,dg5:66.2,safe:93}
+  ],
+  pairs:{
+   sp:{name:"S&P 500",bull:{1:["SPY","SPDR S&P 500 ETF"],2:["SSO","ProShares Ultra S&P500 · 보수 0.89%"],3:["SPXL","Direxion Daily S&P 500 Bull 3X (동일 유형 UPRO)"]},
+       bear:{1:["SH","ProShares Short S&P500 · 보수 0.89%"],2:["SDS","ProShares UltraShort S&P500"],3:["SPXS","Direxion Daily S&P 500 Bear 3X · 보수 1.04% (동일 유형 SPXU)"]}},
+   ndx:{name:"나스닥 100",bull:{1:["QQQ","Invesco QQQ Trust"],2:["QLD","ProShares Ultra QQQ"],3:["TQQQ","ProShares UltraPro QQQ · 보수 0.82%"]},
+       bear:{1:["PSQ","ProShares Short QQQ"],2:["QID","ProShares UltraShort QQQ"],3:["SQQQ","ProShares UltraPro Short QQQ · 보수 0.95%"]}},
+   sox:{name:"반도체",bull:{1:["SOXX","iShares Semiconductor ETF"],3:["SOXL","Direxion Daily Semiconductor Bull 3X · 보수 0.75%"]},
+       bear:{3:["SOXS","Direxion Daily Semiconductor Bear 3X · 보수 1.00%"]}}
+  }
+};
+var METRICS=[
+ {k:"y",label:"배당률",cap:8},{k:"dg5",label:"배당성장"},{k:"er",label:"낮은 보수",inv:true},
+ {k:"r3",label:"3년 수익률"},{k:"beta",label:"낮은 변동",inv:true},{k:"safe",label:"배당 안전"}
+];
+var PRESETS={
+ balanced:{y:25,dg5:20,er:15,r3:20,beta:10,safe:10},
+ growth:{y:15,dg5:35,er:15,r3:20,beta:5,safe:10},
+ income:{y:45,dg5:5,er:10,r3:10,beta:15,safe:15},
+ defense:{y:20,dg5:10,er:10,r3:10,beta:35,safe:15}
+};
+function scoreEtfs(etfs,w){
+  var tot=0;METRICS.forEach(function(m){tot+=(+w[m.k]||0)});
+  var ranges={};
+  METRICS.forEach(function(m){
+    var vals=etfs.map(function(e){var v=e[m.k];if(v==null)return null;return m.cap?Math.min(v,m.cap):v}).filter(function(v){return v!=null});
+    ranges[m.k]={min:Math.min.apply(null,vals),max:Math.max.apply(null,vals)};
+  });
+  return etfs.map(function(e){
+    var parts={},s=0;
+    METRICS.forEach(function(m){
+      var r=ranges[m.k],v=e[m.k],x;
+      if(v==null)x=0;else{if(m.cap)v=Math.min(v,m.cap);x=r.max===r.min?0.5:(v-r.min)/(r.max-r.min);if(m.inv)x=1-x}
+      parts[m.k]=x;s+=x*(+w[m.k]||0);
+    });
+    return {e:e,score:tot?s/tot*100:0,parts:parts};
+  }).sort(function(a,b){return b.score-a.score});
+}
+function regime(m){
+  var sig=[],d200=(m.spx/m.ma200-1)*100,d50=(m.spx/m.ma50-1)*100,dd=(m.spx/m.high-1)*100;
+  function band(x,b,w){return x>b?w:(x<-b?-w:0)}
+  sig.push({name:"200일선 대비 (장기 추세)",state:"200일선 "+(d200>=0?"위 ":"아래 ")+Math.abs(d200).toFixed(1)+"%",pts:band(d200,1,2)});
+  sig.push({name:"50일선 대비 (단기 추세)",state:"50일선 "+(d50>=0?"위 ":"아래 ")+Math.abs(d50).toFixed(1)+"%",pts:band(d50,1,1)});
+  sig.push({name:"50일선과 200일선 배열",state:m.ma50>m.ma200?"50일선이 위 (정배열)":"50일선이 아래 (역배열)",pts:m.ma50>m.ma200?1:-1});
+  sig.push({name:"VIX (공포 지수)",state:m.vix.toFixed(2)+(m.vix<18?" · 안정":m.vix>25?" · 불안":" · 경계"),pts:m.vix<18?1:(m.vix>25?-1:0)});
+  sig.push({name:"52주 고점 대비 낙폭",state:dd.toFixed(1)+"%"+(dd>-3?" · 고점권":dd<-10?" · 조정 이상":" · 눌림"),pts:dd>-3?1:(dd<-10?-1:0)});
+  var score=sig.reduce(function(a,s){return a+s.pts},0);
+  return {score:score,signals:sig,label:score>=3?"bull":(score<=-3?"bear":"neutral"),d200:d200,d50:d50,dd:dd};
+}
+var ALLOC={
+ safe:{bull:{income:25,core:60,tac:0,cash:15},neutral:{income:25,core:60,tac:0,cash:15},bear:{income:25,core:50,tac:0,cash:25}},
+ mid:{bull:{income:15,core:55,tac:15,lev:2,cash:15},neutral:{income:20,core:60,tac:0,cash:20},bear:{income:20,core:50,tac:10,lev:1,cash:20}},
+ agg:{bull:{income:10,core:45,tac:30,lev:3,cash:15},neutral:{income:15,core:60,tac:0,cash:25},bear:{income:15,core:40,tac:20,lev:2,cash:25}}
+};
+function portfolio(o){
+  var a=ALLOC[o.profile][o.regime],rows=[];
+  var cc=o.ranked.filter(function(r){return r.e.type==="cc"}).slice(0,2);
+  var dv=o.ranked.filter(function(r){return r.e.type==="div"}).slice(0,3);
+  function add(sleeve,e,pct,tkOverride){
+    var amt=o.amount*pct/100,px=e?e.price:null;
+    rows.push({sleeve:sleeve,t:tkOverride||(e?e.t:"현금"),n:e?e.n:"",pct:pct,amt:amt,price:px,shares:px?Math.floor(amt/px):null,y:e?e.y:0,div:e?amt*e.y/100:0});
+  }
+  [60,40].forEach(function(w,i){if(cc[i])add("income",cc[i].e,a.income*w/100)});
+  [50,30,20].forEach(function(w,i){if(dv[i])add("core",dv[i].e,a.core*w/100)});
+  if(a.tac){var side=o.regime==="bull"?"bull":"bear",p=DATA.pairs[o.idx][side][a.lev];
+    rows.push({sleeve:side,t:p[0],n:p[1],pct:a.tac,amt:o.amount*a.tac/100,price:null,shares:null,y:0,div:0,lev:a.lev});}
+  rows.push({sleeve:"cash",t:"현금",n:"분할매수 대기 자금",pct:a.cash,amt:o.amount*a.cash/100,price:null,shares:null,y:0,div:0});
+  var div=rows.reduce(function(s,r){return s+r.div},0);
+  return {alloc:a,rows:rows,div:div,yieldPct:o.amount?div/o.amount*100:0};
+}
+function buyPlan(o){
+  var rows=[],n=Math.max(1,Math.floor(o.n)),ws=[],sum=0,i;
+  for(i=0;i<n;i++){var w=o.weight==="pyramid"?i+1:1;ws.push(w);sum+=w}
+  var cumS=0,cumC=0;
+  for(i=0;i<n;i++){
+    var px=o.mode==="ladder"?o.price*(1-o.step*i/100):o.price;
+    if(!(px>0))break;
+    var amt=o.budget*ws[i]/sum,sh=o.frac?Math.floor(amt/px*10000)/10000:Math.floor(amt/px),cost=sh*px;
+    cumS+=sh;cumC+=cost;
+    rows.push({i:i+1,price:px,drop:o.mode==="ladder"?-o.step*i:0,amt:amt,shares:sh,cost:cost,cumShares:cumS,cumCost:cumC,avg:cumS?cumC/cumS:0,date:null});
+  }
+  if(o.mode==="dca"){
+    var base=new Date(o.start||Date.now());
+    rows.forEach(function(r,k){
+      var d=new Date(base.getTime());
+      if(o.freq==="d"){for(var j=0;j<k;j++){d.setDate(d.getDate()+1);while(d.getDay()===0||d.getDay()===6)d.setDate(d.getDate()+1)}}
+      else if(o.freq==="w")d.setDate(d.getDate()+7*k); else if(o.freq==="2w")d.setDate(d.getDate()+14*k); else d.setMonth(d.getMonth()+k);
+      while(d.getDay()===0||d.getDay()===6)d.setDate(d.getDate()+1);
+      r.date=d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2)+"-"+("0"+d.getDate()).slice(-2);
+    });
+  }
+  return rows;
+}
+function sellPlan(o){
+  var n=Math.max(1,Math.floor(o.n)),ws=[],sum=0,i,rows=[];
+  for(i=0;i<n;i++){var w=o.weight==="back"?i+1:(o.weight==="front"?n-i:1);ws.push(w);sum+=w}
+  var isInt=Math.abs(o.shares-Math.round(o.shares))<1e-9,left=o.shares,cum=0;
+  for(i=0;i<n;i++){
+    var q=i===n-1?left:(isInt?Math.floor(o.shares*ws[i]/sum):Math.floor(o.shares*ws[i]/sum*10000)/10000);
+    q=Math.min(q,left);left=Math.round((left-q)*10000)/10000;
+    var pct=o.first+o.gap*i,tp=o.avg*(1+pct/100),pnl=q*(tp-o.avg);cum+=pnl;
+    rows.push({i:i+1,pct:pct,target:tp,qty:q,proceeds:q*tp,pnl:pnl,cum:cum});
+  }
+  var stop=o.stop>0?{price:o.avg*(1-o.stop/100),loss:-o.shares*o.avg*o.stop/100}:null;
+  return {rows:rows,total:cum,stop:stop,rr:stop&&stop.loss?cum/-stop.loss:null};
+}
+function rng(seed){var a=seed>>>0;return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function decay(o){
+  var r=rng(o.seed),idx=[100],bull=[100],bear=[100],i;
+  for(i=1;i<=o.days;i++){
+    var u=Math.max(r(),1e-9),v=r(),z=Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);
+    var ret=(o.drift+o.vol*z)/100;ret=Math.max(-0.3,Math.min(0.3,ret));
+    idx.push(idx[i-1]*(1+ret));
+    bull.push(Math.max(0,bull[i-1]*(1+o.lev*ret)));
+    bear.push(Math.max(0,bear[i-1]*(1-o.lev*ret)));
+  }
+  return {idx:idx,bull:bull,bear:bear};
+}
+var Core={DATA:DATA,METRICS:METRICS,PRESETS:PRESETS,ALLOC:ALLOC,scoreEtfs:scoreEtfs,regime:regime,portfolio:portfolio,buyPlan:buyPlan,sellPlan:sellPlan,decay:decay};
+if(typeof module!=="undefined"&&module.exports)module.exports=Core;else root.Core=Core;
+})(typeof window!=="undefined"?window:this);
+</script>
+
+<script>
+(function(){
+"use strict";
+var C=window.Core,D=C.DATA,$=function(s){return document.querySelector(s)},$$=function(s){return [].slice.call(document.querySelectorAll(s))};
+var KEY="etfusa.v1",S={market:Object.assign({},D.market),w:Object.assign({},C.PRESETS.balanced),preset:"balanced",pIdx:"sp",pLev:"3",
+  pf:{amt:10000,fx:"",prof:"mid",idx:"sp"},b:{tk:"SCHD",px:35.17,bud:3000,mode:"ladder",n:5,step:4,w:"equal",freq:"m",frac:"0"},done:{},
+  s:{avg:35.17,sh:80,n:3,first:8,gap:6,w:"equal",stop:10},sort:{k:"score",dir:-1},seed:134};
+try{var sv=JSON.parse(localStorage.getItem(KEY)||"null");if(sv&&sv.asOf===D.asOf){["market","w","pf","b","s","done"].forEach(function(k){if(sv[k])S[k]=Object.assign(S[k],sv[k])});["preset","pIdx","pLev"].forEach(function(k){if(sv[k])S[k]=sv[k]})}}catch(e){}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(Object.assign({asOf:D.asOf},S)))}catch(e){}}
+function usd(v,d){return v==null||isNaN(v)?"–":(v<0?"−":"")+"$"+Math.abs(v).toLocaleString("en-US",{minimumFractionDigits:d==null?2:d,maximumFractionDigits:d==null?2:d})}
+function pct(v,d){return v==null?"–":v.toFixed(d==null?1:d)+"%"}
+function sgn(v,d){return (v>0?"+":"")+v.toFixed(d==null?1:d)+"%"}
+function num(id){var v=parseFloat($(id).value);return isNaN(v)?0:v}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+var LBL={bull:"Bull",bear:"Bear",neutral:"중립"};
+var tip=$("#tip");
+function showTip(html,ev){tip.innerHTML=html;tip.style.opacity=1;var x=ev.clientX+14,y=ev.clientY+14,w=tip.offsetWidth,h=tip.offsetHeight;if(x+w>innerWidth-8)x=ev.clientX-w-14;if(y+h>innerHeight-8)y=ev.clientY-h-14;tip.style.left=Math.max(8,x)+"px";tip.style.top=Math.max(8,y)+"px"}
+function hideTip(){tip.style.opacity=0}
+function segInit(sel,get,set){$$(sel+" button").forEach(function(b){b.addEventListener("click",function(){set(b.dataset.v);renderAll()})});return function(){$$(sel+" button").forEach(function(b){b.setAttribute("aria-pressed",String(b.dataset.v===String(get())))})}}
+
+/* 1. 국면 */
+var R,ranked;
+function renderRegime(){
+  R=C.regime(S.market);
+  var word=R.label==="bull"?"Bull 구간입니다":R.label==="bear"?"Bear 구간입니다":"중립 구간입니다";
+  $("#heroB").textContent=word;
+  $("#heroB").style.color=R.label==="bull"?"var(--bull-ink)":R.label==="bear"?"var(--bear-ink)":"";
+  var why="S&P 500이 200일선 "+(R.d200>=0?"위 ":"아래 ")+Math.abs(R.d200).toFixed(1)+"%, 50일선 "+(R.d50>=0?"위 ":"아래 ")+Math.abs(R.d50).toFixed(1)+"%에 있고 VIX는 "+S.market.vix.toFixed(1)+"입니다. 다섯 신호 합계 "+(R.score>0?"+":"")+R.score+"점으로, ";
+  why+=R.label==="bull"?"규칙상 Bull ETF를 쓸 수 있는 구간입니다.":R.label==="bear"?"규칙상 Bear ETF로 방어하는 구간입니다.":"레버리지 없이 배당 ETF 분할매수에 집중하는 구간입니다.";
+  $("#heroWhy").textContent=why;
+  $("#needle").style.left=((R.score+6)/12*100)+"%";
+  $("#gaugeBox").setAttribute("aria-label","시장 국면 점수 "+R.score+"점, "+LBL[R.label]);
+  $("#sigTable tbody").innerHTML=R.signals.map(function(s){var c=s.pts>0?"up":s.pts<0?"dn":"zero";return "<tr><td>"+s.name+"</td><td class='l'>"+s.state+"</td><td class='"+c+"'>"+(s.pts>0?"▲ +":s.pts<0?"▼ ":"– ")+s.pts+"</td></tr>"}).join("");
+  $("#sigTable tfoot").innerHTML="<tr><td>합계</td><td class='l'>"+LBL[R.label]+" 판정</td><td>"+(R.score>0?"+":"")+R.score+" / 6</td></tr>";
+}
+var segIdx=segInit("#pIdx",function(){return S.pIdx},function(v){S.pIdx=v}),segLev=segInit("#pLev",function(){return S.pLev},function(v){S.pLev=v});
+function renderPair(){
+  segIdx();segLev();
+  var p=D.pairs[S.pIdx];
+  [["bull","#sideBull"],["bear","#sideBear"]].forEach(function(a){
+    var el=$(a[1]),x=p[a[0]][S.pLev],on=R.label===a[0];
+    el.classList.toggle("on",on);
+    el.querySelector(".sym").textContent=x?x[0]:"없음";
+    el.querySelector(".nm").textContent=x?x[1]:"이 지수에는 "+S.pLev+"배 "+(a[0]==="bull"?"Bull":"Bear")+" 대표 ETF가 없어 다른 배율을 골라야 합니다";
+    el.querySelector(".state").textContent=on?"현재 국면에 해당":(R.label==="neutral"?"중립이라 대기":"현재 국면과 반대");
+  });
+}
+/* 2. 선별 */
+function buildSliders(){
+  $("#sliders").innerHTML=C.METRICS.map(function(m){return "<label class='sl'><span>"+m.label+"</span><input type='range' min='0' max='50' step='5' data-k='"+m.k+"'><output></output></label>"}).join("");
+  $$("#sliders input").forEach(function(i){i.addEventListener("input",function(){S.w[i.dataset.k]=+i.value;S.preset="custom";renderAll()})});
+}
+var segPre=segInit("#wPreset",function(){return S.preset},function(v){S.preset=v;S.w=Object.assign({},C.PRESETS[v])});
+var COLS=[["t","종목"],["score","점수"],["price","기준가"],["y","배당률"],["er","보수"],["freq","배당"],["dg5","5년 배당성장"],["ytd","올해"],["r3","3년 연환산"],["r5","5년 연환산"],["beta","베타"],["safe","안전점수"],["aum","순자산"]];
+function renderScreen(){
+  segPre();
+  $$("#sliders input").forEach(function(i){i.value=S.w[i.dataset.k];i.nextElementSibling.textContent=S.w[i.dataset.k]});
+  ranked=C.scoreEtfs(D.etfs,S.w);
+  var H=ranked.length*30+8,svg="<svg viewBox='0 0 560 "+H+"' role='img' aria-label='배당 ETF 종합 점수 막대 차트'>";
+  ranked.forEach(function(r,i){var y=i*30+4,w=Math.max(2,r.score/100*400);
+    svg+="<g class='bar' data-i='"+i+"'><rect x='0' y='"+y+"' width='560' height='28' fill='transparent'/><text x='0' y='"+(y+18)+"' style='font-weight:600;fill:var(--ink)'>"+r.e.t+"</text>"+
+    "<path d='M56 "+(y+3)+"h"+(w-4)+"a4 4 0 0 1 4 4v10a4 4 0 0 1-4 4h-"+(w-4)+"z' fill='var(--"+(r.e.type==="cc"?"income":"core")+")'/>"+
+    "<text x='"+(56+w+8)+"' y='"+(y+18)+"' style='fill:var(--ink)'>"+r.score.toFixed(0)+"점</text></g>"});
+  $("#scoreChart").innerHTML=svg+"</svg>";
+  $$("#scoreChart .bar").forEach(function(g){var r=ranked[+g.dataset.i];
+    g.addEventListener("mousemove",function(ev){showTip("<b>"+r.e.t+"</b> "+esc(r.e.n)+"<br>"+C.METRICS.map(function(m){return m.label+" "+(r.parts[m.k]*100).toFixed(0)}).join(" · ")+"<br>배당률 "+pct(r.e.y,2)+" · 보수 "+pct(r.e.er,2),ev)});
+    g.addEventListener("mouseleave",hideTip)});
+  var sc={};ranked.forEach(function(r){sc[r.e.t]=r.score});
+  var rows=D.etfs.map(function(e){return Object.assign({score:sc[e.t]},e)}),k=S.sort.k,dir=S.sort.dir;
+  rows.sort(function(a,b){var x=a[k],y=b[k];if(x==null)return 1;if(y==null)return -1;return (typeof x==="string"?x.localeCompare(y):x-y)*dir});
+  $("#etfTable thead").innerHTML="<tr>"+COLS.map(function(c){return "<th"+(c[0]==="freq"?" class='l'":"")+"><button data-k='"+c[0]+"' aria-sort='"+(k===c[0]?(dir<0?"descending":"ascending"):"none")+"'>"+c[1]+"</button></th>"}).join("")+"</tr>";
+  $("#etfTable tbody").innerHTML=rows.map(function(e){return "<tr><td><span class='tk'>"+e.t+"</span> <span class='tag'>"+e.kind+"</span><span class='small nmc'>"+esc(e.n)+"</span></td><td><b>"+e.score.toFixed(0)+"</b></td><td>"+usd(e.price)+"</td><td>"+pct(e.y,2)+"</td><td>"+pct(e.er,2)+"</td><td class='l'>"+e.freq+"</td><td>"+(e.dg5==null?"–":sgn(e.dg5))+"</td><td>"+sgn(e.ytd)+"</td><td>"+pct(e.r3)+"</td><td>"+pct(e.r5)+"</td><td>"+e.beta.toFixed(2)+"</td><td>"+e.safe+"</td><td>$"+e.aum.toFixed(1)+"B</td></tr>"}).join("");
+  $$("#etfTable th button").forEach(function(b){b.addEventListener("click",function(){var kk=b.dataset.k;S.sort=S.sort.k===kk?{k:kk,dir:-S.sort.dir}:{k:kk,dir:(kk==="t"||kk==="kind"||kk==="er"||kk==="beta")?1:-1};renderScreen()})});
+}
+/* 3. 포트폴리오 */
+var SL={income:["월배당 인컴","income"],core:["배당 코어","core"],bull:["전술 Bull","bull"],bear:["전술 Bear","bear"],cash:["현금","cash"]};
+function renderPf(){
+  var P=C.portfolio({profile:S.pf.prof,regime:R.label,ranked:ranked,amount:+S.pf.amt||0,idx:S.pf.idx}),fx=parseFloat(S.pf.fx)||0;
+  var groups={};P.rows.forEach(function(r){groups[r.sleeve]=(groups[r.sleeve]||0)+r.pct});
+  var order=["income","core","bull","bear","cash"].filter(function(k){return groups[k]});
+  $("#pfStack").innerHTML=order.map(function(k){return "<div style='flex:"+groups[k]+";background:var(--"+SL[k][1]+")' data-k='"+k+"'>"+(groups[k]>=8?groups[k]+"%":"")+"</div>"}).join("");
+  $("#pfLegend").innerHTML=order.map(function(k){return "<span><i style='background:var(--"+SL[k][1]+")'></i>"+SL[k][0]+" "+groups[k]+"%</span>"}).join("");
+  $$("#pfStack div").forEach(function(d){d.addEventListener("mousemove",function(ev){var k=d.dataset.k;showTip("<b>"+SL[k][0]+" "+groups[k]+"%</b><br>"+P.rows.filter(function(r){return r.sleeve===k}).map(function(r){return r.t+" "+r.pct.toFixed(1)+"% · "+usd(r.amt,0)}).join("<br>"),ev)});d.addEventListener("mouseleave",hideTip)});
+  var net=P.div*0.85;
+  $("#pfKpis").innerHTML="<div class='kpi'><b>"+LBL[R.label]+"</b><span>적용된 시장 국면</span></div><div class='kpi'><b>"+pct(P.yieldPct,2)+"</b><span>포트폴리오 배당률 (세전)</span></div><div class='kpi'><b>"+usd(P.div,0)+"</b><span>예상 연 배당 (세전)</span></div><div class='kpi'><b>"+usd(net/12,0)+(fx?" <span class='small'>≈ "+Math.round(net/12*fx).toLocaleString("ko-KR")+"원</span>":"")+"</b><span>월 환산 배당 (미국 원천징수 15% 차감 후)</span></div>";
+  $("#pfTable tbody").innerHTML=P.rows.map(function(r){return "<tr><td>"+SL[r.sleeve][0]+"</td><td class='l wrapc'><span class='tk'>"+r.t+"</span> <span class='small'>"+esc(r.n)+"</span></td><td>"+r.pct.toFixed(1)+"%</td><td>"+usd(r.amt,0)+"</td><td>"+(r.price?usd(r.price):"–")+"</td><td>"+(r.shares==null?"–":r.shares)+"</td><td>"+(r.y?pct(r.y,2):"–")+"</td><td>"+(r.div?usd(r.div,0):"–")+"</td></tr>"}).join("");
+  $("#pfTable tfoot").innerHTML="<tr><td>합계</td><td></td><td>100%</td><td>"+usd(+S.pf.amt||0,0)+"</td><td></td><td></td><td>"+pct(P.yieldPct,2)+"</td><td>"+usd(P.div,0)+"</td></tr>";
+  var pn={safe:"안정형",mid:"균형형",agg:"공격형"}[S.pf.prof],a=P.alloc;
+  $("#pfRule").textContent=pn+" × "+LBL[R.label]+" 규칙: 배당 코어 "+a.core+"%(점수 상위 배당주형 3개를 5:3:2), 월배당 인컴 "+a.income+"%(커버드콜형 상위 2개를 6:4), "+(a.tac?"전술 "+(R.label==="bull"?"Bull":"Bear")+" "+a.lev+"배 ETF "+a.tac+"%, ":"전술 ETF 없음, ")+"현금 "+a.cash+"%. 2단계의 가중치나 1단계의 국면이 바뀌면 구성도 바뀝니다. 전술 ETF 가격은 4단계에서 직접 입력합니다.";
+}
+/* 4. 분할매수 */
+var ALLTK=[];
+D.etfs.forEach(function(e){ALLTK.push([e.t,e.price])});
+Object.keys(D.pairs).forEach(function(k){["bull","bear"].forEach(function(s){Object.keys(D.pairs[k][s]).forEach(function(l){var t=D.pairs[k][s][l][0];if(!ALLTK.some(function(x){return x[0]===t}))ALLTK.push([t,null])})})});
+$("#b_tk").innerHTML=ALLTK.map(function(x){return "<option>"+x[0]+"</option>"}).join("");
+var BP={ladder5:{mode:"ladder",n:5,step:4,w:"equal"},pyr3:{mode:"ladder",n:3,step:7,w:"pyramid"},dca12:{mode:"dca",n:12,freq:"m"},inf40:{mode:"dca",n:40,freq:"d"}};
+$$("[data-bp]").forEach(function(b){b.addEventListener("click",function(){Object.assign(S.b,BP[b.dataset.bp]);S.done={};if(b.dataset.bp==="inf40"){S.s.n=1;S.s.first=10;S.s.stop=0}else if(+S.s.n===1&&+S.s.first===10&&+S.s.stop===0){S.s.n=3;S.s.first=8;S.s.stop=10}fill();renderAll()})});
+var buyRows=[];
+function renderBuy(){
+  var b=S.b,lad=b.mode==="ladder";
+  $("#b_stepF").hidden=!lad;$("#b_wF").hidden=!lad;$("#b_freqF").hidden=lad;
+  buyRows=C.buyPlan({budget:+b.bud||0,price:+b.px||0,n:+b.n||1,step:+b.step||0,weight:lad?b.w:"equal",mode:b.mode,freq:b.freq,frac:b.frac==="1"});
+  if(!(+b.px>0)){$("#bKpis").innerHTML="";$("#bTable thead").innerHTML="";$("#bTable tbody").innerHTML="<tr><td class='l wrapc'>현재가를 입력하면 계획표가 만들어집니다. Bull·Bear ETF는 증권사 화면의 현재가를 넣어 주세요.</td></tr>";$("#bChart").innerHTML="";$("#bLegend").innerHTML="";return}
+  var last=buyRows[buyRows.length-1]||{cumShares:0,cumCost:0,avg:0},dn=buyRows.filter(function(r){return S.done[r.i]}),ds=0,dc=0;dn.forEach(function(r){ds+=r.shares;dc+=r.cost});
+  $("#bKpis").innerHTML="<div class='kpi'><b>"+usd(last.avg)+"</b><span>전 회차 체결 시 평균단가</span></div><div class='kpi'><b>"+(+last.cumShares.toFixed(4))+"주</b><span>총 매수 수량</span></div><div class='kpi'><b>"+usd((+b.bud||0)-last.cumCost,0)+"</b><span>남는 예산</span></div><div class='kpi'><b>"+dn.length+" / "+buyRows.length+"회</b><span>체결 완료"+(ds?" · 평단 "+usd(dc/ds):"")+"</span></div>";
+  $("#bTable thead").innerHTML="<tr><th>체결</th><th>회차</th><th>"+(lad?"매수가":"매수일")+"</th>"+(lad?"<th>현재가 대비</th>":"")+"<th>배정 금액</th><th>수량</th><th>누적 평단</th></tr>";
+  $("#bTable tbody").innerHTML=buyRows.map(function(r){return "<tr class='"+(S.done[r.i]?"done":"")+"'><td><input type='checkbox' aria-label='"+r.i+"회차 체결' data-i='"+r.i+"'"+(S.done[r.i]?" checked":"")+"></td><td>"+r.i+"</td><td>"+(lad?usd(r.price):r.date)+"</td>"+(lad?"<td class='"+(r.drop<0?"dn":"zero")+"'>"+(r.drop?r.drop.toFixed(1)+"%":"현재가")+"</td>":"")+"<td>"+usd(r.amt,0)+"</td><td>"+r.shares+"</td><td>"+(lad?usd(r.avg):"–")+"</td></tr>"}).join("");
+  $$("#bTable input").forEach(function(c){c.addEventListener("change",function(){if(c.checked)S.done[c.dataset.i]=1;else delete S.done[c.dataset.i];renderBuy();save()})});
+  if(lad&&buyRows.length>1){
+    var W=520,Hh=260,L=52,Rr=70,T=12,B=28,n=buyRows.length,mx=+b.px,mn=buyRows[n-1].price,pad=(mx-mn)*0.12||1,y=function(v){return T+(mx+pad-v)/((mx+pad)-(mn-pad))*(Hh-T-B)},x=function(i){return L+i/(n-1)*(W-L-Rr)};
+    var svg="<svg viewBox='0 0 "+W+" "+Hh+"' role='img' aria-label='회차별 매수가와 누적 평균단가'>";
+    for(var g=0;g<=4;g++){var v=mn-pad+(mx-mn+2*pad)*g/4;svg+="<line class='gridl' x1='"+L+"' x2='"+(W-Rr)+"' y1='"+y(v)+"' y2='"+y(v)+"'/><text x='"+(L-8)+"' y='"+(y(v)+4)+"' text-anchor='end'>"+usd(v)+"</text>"}
+    var p1="",p2="";buyRows.forEach(function(r,i){p1+=(i?"L":"M")+x(i)+" "+y(r.price);p2+=(i?"L":"M")+x(i)+" "+y(r.avg)});
+    svg+="<path d='"+p1+"' fill='none' stroke='var(--bear)' stroke-width='2'/><path d='"+p2+"' fill='none' stroke='var(--bull)' stroke-width='2'/>";
+    buyRows.forEach(function(r,i){svg+="<circle cx='"+x(i)+"' cy='"+y(r.price)+"' r='4' fill='var(--bear)' stroke='var(--surface)' stroke-width='2'/><circle cx='"+x(i)+"' cy='"+y(r.avg)+"' r='4' fill='var(--bull)' stroke='var(--surface)' stroke-width='2'/><text x='"+x(i)+"' y='"+(Hh-8)+"' text-anchor='middle'>"+(n<=12||i%Math.ceil(n/10)===0?r.i+"회":"")+"</text><rect class='hit' data-i='"+i+"' x='"+(x(i)-(W-L-Rr)/(n-1)/2)+"' y='"+T+"' width='"+(W-L-Rr)/(n-1)+"' height='"+(Hh-T-B)+"' fill='transparent'/>"});
+    var le=buyRows[n-1],ya=y(le.avg),yp=y(le.price);if(yp-ya<16)ya=yp-16;
+    svg+="<text x='"+(W-Rr+8)+"' y='"+(yp+4)+"' style='fill:var(--ink)'>매수가</text><text x='"+(W-Rr+8)+"' y='"+(ya+4)+"' style='fill:var(--ink)'>평단</text></svg>";
+    $("#bChart").innerHTML=svg;
+    $("#bLegend").innerHTML="<span><i style='background:var(--bear)'></i>회차별 매수가</span><span><i style='background:var(--bull)'></i>누적 평균단가</span>";
+    $$("#bChart .hit").forEach(function(h){h.addEventListener("mousemove",function(ev){var r=buyRows[+h.dataset.i];showTip("<b>"+r.i+"회차</b> ("+(r.drop?r.drop.toFixed(1)+"%":"현재가")+")<br>매수가 "+usd(r.price)+" · "+r.shares+"주<br>누적 평단 "+usd(r.avg),ev)});h.addEventListener("mouseleave",hideTip)});
+  }else{
+    $("#bLegend").innerHTML="";
+    $("#bChart").innerHTML=lad?"":"<p class='small'>날짜 기준 적립은 매수가를 미리 알 수 없어 차트를 그리지 않습니다. 회차마다 "+usd(buyRows[0]?buyRows[0].amt:0,0)+"씩, 그날 가격으로 삽니다. 표의 수량은 현재가 기준 참고값입니다.</p>";
+  }
+}
+$("#b_send").addEventListener("click",function(){var rows=buyRows.filter(function(r){return S.done[r.i]});if(!rows.length)rows=buyRows;var s=0,c=0;rows.forEach(function(r){s+=r.shares;c+=r.cost});if(!s)return;S.s.avg=+(c/s).toFixed(2);S.s.sh=+s.toFixed(4);fill();renderAll();location.hash="#s5"});
+$("#b_clear").addEventListener("click",function(){S.done={};renderAll()});
+/* 5. 분할매도 */
+function renderSell(){
+  var s=S.s,P=C.sellPlan({avg:+s.avg||0,shares:+s.sh||0,n:+s.n||1,first:+s.first||0,gap:+s.gap||0,weight:s.w,stop:+s.stop||0}),cost=(+s.avg||0)*(+s.sh||0);
+  $("#sKpis").innerHTML="<div class='kpi'><b>"+usd(cost,0)+"</b><span>매입 금액</span></div><div class='kpi'><b class='up'>"+usd(P.total,0)+"</b><span>전 단계 익절 시 수익 ("+(cost?sgn(P.total/cost*100):"–")+")</span></div><div class='kpi'><b class='dn'>"+(P.stop?usd(P.stop.loss,0):"–")+"</b><span>손절선에서 전량 매도 시</span></div><div class='kpi'><b>"+(P.rr?P.rr.toFixed(2)+" : 1":"–")+"</b><span>손익비 (수익 ÷ 손실)</span></div>";
+  var h=P.rows.map(function(r){return "<tr><td>"+r.i+"차 익절</td><td>"+usd(r.target)+"</td><td class='up'>▲ "+sgn(r.pct)+"</td><td>"+r.qty+"</td><td>"+usd(r.proceeds,0)+"</td><td class='up'>"+usd(r.pnl,0)+"</td><td>"+usd(r.cum,0)+"</td></tr>"}).join("");
+  if(P.stop)h+="<tr class='stop'><td>손절</td><td>"+usd(P.stop.price)+"</td><td>▼ −"+(+s.stop).toFixed(1)+"%</td><td>"+(+s.sh)+"</td><td>"+usd(P.stop.price*s.sh,0)+"</td><td>"+usd(P.stop.loss,0)+"</td><td>–</td></tr>";
+  $("#sTable tbody").innerHTML=h;
+}
+/* 레버리지 */
+function renderDecay(){
+  var lev=+$("#d_lev").value,days=Math.max(10,Math.min(250,num("#d_days")||60)),o={lev:lev,vol:num("#d_vol"),drift:num("#d_drift"),days:days,seed:S.seed},X=C.decay(o);
+  var ser=[["지수 (1배)",X.idx,"var(--idx)"],["Bull "+lev+"배",X.bull,"var(--bull)"],["Bear −"+lev+"배",X.bear,"var(--bear)"]];
+  var all=X.idx.concat(X.bull,X.bear),mx=Math.max.apply(null,all),mn=Math.min.apply(null,all),W=1000,H=320,L=44,Rr=110,T=12,B=26,pad=(mx-mn)*0.08||1;
+  var y=function(v){return T+(mx+pad-v)/(mx-mn+2*pad)*(H-T-B)},x=function(i){return L+i/days*(W-L-Rr)};
+  var svg="<svg viewBox='0 0 "+W+" "+H+"' role='img' aria-label='지수와 레버리지 Bull, Bear ETF의 가상 경로'>";
+  for(var g=0;g<=4;g++){var v=mn-pad+(mx-mn+2*pad)*g/4;svg+="<line class='gridl' x1='"+L+"' x2='"+(W-Rr)+"' y1='"+y(v)+"' y2='"+y(v)+"'/><text x='"+(L-8)+"' y='"+(y(v)+4)+"' text-anchor='end'>"+v.toFixed(0)+"</text>"}
+  svg+="<line x1='"+L+"' x2='"+(W-Rr)+"' y1='"+y(100)+"' y2='"+y(100)+"' stroke='var(--muted)' stroke-dasharray='3 4'/>";
+  var ends=ser.map(function(s){return {l:s[0],y:y(s[1][days])}}).sort(function(a,b){return a.y-b.y});
+  for(var i=1;i<ends.length;i++)if(ends[i].y-ends[i-1].y<16)ends[i].y=ends[i-1].y+16;
+  ser.forEach(function(s){var p="";s[1].forEach(function(v,i){p+=(i?"L":"M")+x(i).toFixed(1)+" "+y(v).toFixed(1)});svg+="<path d='"+p+"' fill='none' stroke='"+s[2]+"' stroke-width='2' stroke-linejoin='round'/>"});
+  ends.forEach(function(e){svg+="<text x='"+(W-Rr+8)+"' y='"+(e.y+4)+"' style='fill:var(--ink)'>"+e.l+"</text>"});
+  svg+="<text x='"+L+"' y='"+(H-6)+"'>시작</text><text x='"+(W-Rr)+"' y='"+(H-6)+"' text-anchor='end'>"+days+"일째</text><line id='dX' y1='"+T+"' y2='"+(H-B)+"' stroke='var(--ink)' stroke-width='1' opacity='0'/><rect id='dHit' x='"+L+"' y='"+T+"' width='"+(W-L-Rr)+"' height='"+(H-T-B)+"' fill='transparent'/></svg>";
+  $("#dChart").innerHTML=svg;
+  $("#dLegend").innerHTML=ser.map(function(s){return "<span><i style='background:"+s[2]+"'></i>"+s[0]+"</span>"}).join("");
+  var hit=$("#dHit"),xl=$("#dX");
+  hit.addEventListener("mousemove",function(ev){var bb=hit.getBoundingClientRect(),i=Math.round((ev.clientX-bb.left)/bb.width*days);i=Math.max(0,Math.min(days,i));xl.setAttribute("x1",x(i));xl.setAttribute("x2",x(i));xl.setAttribute("opacity",.5);showTip("<b>"+i+"일째</b><br>"+ser.map(function(s){return s[0]+" "+s[1][i].toFixed(1)}).join("<br>"),ev)});
+  hit.addEventListener("mouseleave",function(){xl.setAttribute("opacity",0);hideTip()});
+  function k(l,v){var c=v-100,z=Math.abs(c)<0.05;return "<div class='kpi'><b class='"+(z?"":c>0?"up":"dn")+"'>"+(z?"0.0":(c>0?"▲ +":"▼ −")+Math.abs(c).toFixed(1))+"%</b><span>"+l+" 최종 수익률</span></div>"}
+  $("#dKpis").innerHTML=k("지수",X.idx[days])+k("Bull "+lev+"배",X.bull[days])+k("Bear −"+lev+"배",X.bear[days])+"<div class='kpi'><b>"+((X.idx[days]-100)*lev).toFixed(1)+"%</b><span>지수 수익률 × "+lev+" (기대하기 쉬운 값)</span></div>";
+}
+/* 입력 연결 */
+var MAP=[["#m_spx","market","spx"],["#m_ma50","market","ma50"],["#m_ma200","market","ma200"],["#m_vix","market","vix"],["#m_high","market","high"],
+ ["#pf_amt","pf","amt"],["#pf_fx","pf","fx"],["#pf_prof","pf","prof"],["#pf_idx","pf","idx"],
+ ["#b_tk","b","tk"],["#b_px","b","px"],["#b_bud","b","bud"],["#b_mode","b","mode"],["#b_n","b","n"],["#b_step","b","step"],["#b_w","b","w"],["#b_freq","b","freq"],["#b_frac","b","frac"],
+ ["#s_avg","s","avg"],["#s_sh","s","sh"],["#s_n","s","n"],["#s_first","s","first"],["#s_gap","s","gap"],["#s_w","s","w"],["#s_stop","s","stop"]];
+function fill(){MAP.forEach(function(m){$(m[0]).value=S[m[1]][m[2]]})}
+MAP.forEach(function(m){var el=$(m[0]);el.addEventListener(el.tagName==="SELECT"?"change":"input",function(){
+  var v=el.value;if(m[1]==="market"){v=parseFloat(v);if(!(v>0))return}
+  S[m[1]][m[2]]=v;
+  if(m[0]==="#b_tk"){var f=ALLTK.filter(function(x){return x[0]===v})[0];S.b.px=f&&f[1]?f[1]:"";$("#b_px").value=S.b.px;S.done={}}
+  if(m[1]==="b"&&m[0]!=="#b_tk"&&m[0]!=="#b_frac")S.done={};
+  renderAll()})});
+$("#m_reset").addEventListener("click",function(){S.market=Object.assign({},D.market);fill();renderAll()});
+["#d_lev","#d_vol","#d_drift","#d_days"].forEach(function(id){$(id).addEventListener("input",renderDecay)});
+$("#d_again").addEventListener("click",function(){S.seed=(S.seed*31+17)%100000;renderDecay()});
+function renderAll(){renderRegime();renderPair();renderScreen();renderPf();renderBuy();renderSell();save()}
+var dt=D.asOf.split("-");
+$("#asof").textContent="기준 "+D.asOf+" 미국장 종가";$("#m_asof").textContent="기준일 "+D.asOf;$("#f_asof").textContent=dt[0]+"년 "+(+dt[1])+"월 "+(+dt[2])+"일";
+buildSliders();fill();renderAll();renderDecay();
+})();
+</script>
+</body>
+</html>
